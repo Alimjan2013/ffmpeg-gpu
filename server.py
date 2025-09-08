@@ -127,6 +127,10 @@ def convert():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/', methods=['GET'])
+def health():
+    return jsonify({"status": "running"}), 200
+
 @app.route('/gpu-test', methods=['GET'])
 def gpu_test():
     """Test if NVIDIA GPU is available and ffmpeg NVENC encoders are present."""

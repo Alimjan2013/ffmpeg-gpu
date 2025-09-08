@@ -1,0 +1,26 @@
+name: Build and Push to Harbor
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Harbor
+        run: echo "${{ secrets.HARBOR_PASSWORD }}" | docker login harbor1.suanleme.cn -u ff4d6pgf --password-stdin
+
+      - name: Build Docker image
+        run: |
+          cd docker-images/8.0/ubuntu2404-edge
+          docker build -t ffmpeg:latest .
+
+      - name: Push to Harbor
+        run: |
+          docker tag ffmpeg:latest harbor1.suanleme.cn/ff4d6pgf/ffmpeg:latest
+          docker push harbor1.suanleme.cn/ff4d6pgf/ffmpeg:latest

@@ -1,38 +1,40 @@
 
-# Dockerfile for GPU-accelerated ffmpeg + Python Flask server
-# Requires running with NVIDIA runtime:
-#   docker run --gpus all ...
 
-FROM jrottenberg/ffmpeg:8.0-nvidia
+# Multi-stage Dockerfile: Python builder, ffmpeg from jrottenberg, CUDA runtime as final image
 
-ENV PYTHONUNBUFFERED=1 \
-    VIRTUAL_ENV=/app/.venv \
-    PATH="/app/.venv/bin:$PATH" \
-    MY_VARIABLE="This is a default value"
+# Stage 1: Python builder
+FROM python:3.12-slim as builder
+WORKDIR /app
+COPY requirements.txt .
+RUN python -m venv /venv && \
+    . /venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-USER root
+# Stage 2: Get ffmpeg with NVENC from jrottenberg image
+FROM jrottenberg/ffmpeg:8.0-nvidia as ffmpeg
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        python3.12 \
-        python3.12-venv \
-        python3-pip \
-        nvidia-utils-525 || apt-get install -y nvidia-utils-470 || true && \
-    rm -rf /var/lib/apt/lists/*
-
+# Stage 3: Final runtime image
+FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
+ENV VIRTUAL_ENV=/venv
+ENV PATH="/venv/bin:$PATH"
 WORKDIR /app
 
-RUN python3.12 -m venv $VIRTUAL_ENV
+# Copy Python environment
+COPY --from=builder /venv /venv
+COPY --from=builder /app /app
 
-RUN . $VIRTUAL_ENV/bin/activate && \
-    pip install --upgrade pip && \
-    pip install flask requests boto3 ffmpeg-python==0.2.0
+# Copy ffmpeg and ffprobe binaries
+COPY --from=ffmpeg /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
+COPY --from=ffmpeg /usr/local/bin/ffprobe /usr/local/bin/ffprobe
 
-# Optional: check GPU visibility at build time (for debugging only)
-RUN nvidia-smi || echo "nvidia-smi not available at build time"
+# (Optional) Install system dependencies if needed
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsm6 libxext6 libxrender-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY server.py /app/server.py
 
 EXPOSE 5000
 
-ENTRYPOINT ["python3.12", "server.py"]
+ENTRYPOINT ["python", "server.py"]

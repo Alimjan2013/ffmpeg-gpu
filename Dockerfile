@@ -37,4 +37,4 @@ COPY server.py /app/server.py
 
 EXPOSE 5000
 
-ENTRYPOINT ["python", "server.py"]
+ENTRYPOINT ["/venv/bin/python", "server.py"]

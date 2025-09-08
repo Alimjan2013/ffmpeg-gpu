@@ -17,10 +17,9 @@ jobs:
 
       - name: Build Docker image
         run: |
-          cd docker-images/8.0/ubuntu2404-edge
-          docker build -t ffmpeg:latest .
+          docker build -t ffmpeg:gpu .
 
       - name: Push to Harbor
         run: |
-          docker tag ffmpeg:latest harbor1.suanleme.cn/ff4d6pgf/ffmpeg:latest
-          docker push harbor1.suanleme.cn/ff4d6pgf/ffmpeg:latest
+          docker tag ffmpeg:latest harbor1.suanleme.cn/ff4d6pgf/ffmpeg:gpu
+          docker push harbor1.suanleme.cn/ff4d6pgf/ffmpeg:gpu

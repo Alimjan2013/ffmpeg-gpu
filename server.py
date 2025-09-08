@@ -70,7 +70,7 @@ def convert():
             ext = '.webm'
             ff_format = 'webm'
         elif out_format == 'mkv':
-            vcodec = 'libaom-av1'
+            vcodec = 'av1_nvenc'
             acodec = 'libopus'
             ext = '.mkv'
             ff_format = 'matroska'

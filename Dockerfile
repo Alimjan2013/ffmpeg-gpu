@@ -1,6 +1,6 @@
 # Dockerfile
 
-FROM jrottenberg/ffmpeg:8.0-ubuntu2404-edge
+FROM jrottenberg/ffmpeg:8.0-nvidia
 
 
 ENV PYTHONUNBUFFERED=1 \

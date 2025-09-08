@@ -54,9 +54,13 @@ def convert():
         if out_format not in ['mp4', 'webm', 'mkv', 'h265']:
             return jsonify({'error': 'Unsupported format'}), 400
 
-        # Set codec and extension based on format (CPU-only)
+        # Set codec and extension based on format (GPU-accelerated for mp4/h265 if possible)
+        use_gpu = os.environ.get('USE_GPU', '1') == '1'
         if out_format == 'mp4':
-            vcodec = 'libx264'
+            if use_gpu:
+                vcodec = 'h264_nvenc'
+            else:
+                vcodec = 'libx264'
             acodec = 'aac'
             ext = '.mp4'
             ff_format = 'mp4'
@@ -71,7 +75,10 @@ def convert():
             ext = '.mkv'
             ff_format = 'matroska'
         elif out_format == 'h265':
-            vcodec = 'libx265'
+            if use_gpu:
+                vcodec = 'hevc_nvenc'
+            else:
+                vcodec = 'libx265'
             acodec = 'aac'
             ext = '.mp4'
             ff_format = 'mp4'
@@ -79,14 +86,22 @@ def convert():
         output_path = os.path.join(OUTPUT_DIR, filename + ext)
         try:
             stream = ffmpeg.input(input_path)
-            stream = ffmpeg.output(
-                stream,
-                output_path,
+            output_kwargs = dict(
                 vcodec=vcodec,
                 vf='scale=-2:480',
                 acodec=acodec,
                 audio_bitrate='128k',
                 format=ff_format
+            )
+            # Add GPU-specific options if using GPU
+            if use_gpu and vcodec in ['h264_nvenc', 'hevc_nvenc']:
+                output_kwargs['preset'] = 'fast'
+                output_kwargs['rc'] = 'vbr'
+                output_kwargs['gpu'] = 0
+            stream = ffmpeg.output(
+                stream,
+                output_path,
+                **output_kwargs
             )
             ffmpeg.run(stream, overwrite_output=True)
         except Exception as e:

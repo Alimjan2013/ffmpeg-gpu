@@ -15,7 +15,7 @@ RUN python -m venv /venv && \
 FROM jrottenberg/ffmpeg:8.0-nvidia as ffmpeg
 
 # Stage 3: Final runtime image
-FROM nvidia/cuda:12.6.3-cudnn-devel-ubuntu22.04
+FROM nvidia/cuda:12.6.2-devel-ubuntu24.04
 ENV VIRTUAL_ENV=/venv
 ENV PATH="/venv/bin:$PATH"
 WORKDIR /app

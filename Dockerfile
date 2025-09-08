@@ -1,7 +1,3 @@
-
-
-# Multi-stage Dockerfile: Python builder, ffmpeg from jrottenberg, CUDA runtime as final image
-
 # Stage 1: Python builder
 FROM python:3.12-slim as builder
 WORKDIR /app
@@ -11,30 +7,29 @@ RUN python -m venv /venv && \
     pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Stage 2: Get ffmpeg with NVENC from jrottenberg image
+# Stage 2: Get ffmpeg with NVENC
 FROM jrottenberg/ffmpeg:8.0-nvidia as ffmpeg
 
 # Stage 3: Final runtime image
-FROM nvidia/cuda:12.6.2-devel-ubuntu24.04
+FROM nvidia/cuda:12.6.2-runtime-ubuntu24.04
 ENV VIRTUAL_ENV=/venv
 ENV PATH="/venv/bin:$PATH"
 WORKDIR /app
 
-# Copy Python environment
+# Install Python runtime + minimal system libs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.12 \
+    libsm6 libxext6 libxrender-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy Python environment and app
 COPY --from=builder /venv /venv
 COPY --from=builder /app /app
 
-# Copy ffmpeg and ffprobe binaries
-COPY --from=ffmpeg /usr/local/bin/ffmpeg /usr/local/bin/ffmpeg
-COPY --from=ffmpeg /usr/local/bin/ffprobe /usr/local/bin/ffprobe
-
-# (Optional) Install system dependencies if needed
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libsm6 libxext6 libxrender-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Copy ffmpeg binaries and libs
+COPY --from=ffmpeg /usr/local/ /usr/local/
 
 COPY server.py /app/server.py
 
 EXPOSE 5000
-
 ENTRYPOINT ["/venv/bin/python", "server.py"]

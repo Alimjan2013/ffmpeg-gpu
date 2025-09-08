@@ -1,3 +1,6 @@
+import subprocess
+
+
 import os
 import requests
 from flask import Flask, request, jsonify
@@ -11,9 +14,6 @@ DOWNLOAD_DIR = '/tmp/downloads'
 OUTPUT_DIR = '/tmp/outputs'
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-
-
 
 
 @app.route('/convert', methods=['POST'])
@@ -127,5 +127,30 @@ def convert():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/gpu-test', methods=['GET'])
+def gpu_test():
+    """Test if NVIDIA GPU is available and ffmpeg NVENC encoders are present."""
+    # Check nvidia-smi
+    try:
+        smi_out = subprocess.check_output(['nvidia-smi'], stderr=subprocess.STDOUT, timeout=5).decode()
+        gpu_status = 'OK'
+    except Exception as e:
+        smi_out = str(e)
+        gpu_status = 'FAIL'
+
+    # Check ffmpeg NVENC encoders
+    try:
+        ffmpeg_out = subprocess.check_output(['ffmpeg', '-hide_banner', '-encoders'], stderr=subprocess.STDOUT, timeout=10).decode()
+        nvenc_present = any(enc in ffmpeg_out for enc in ['h264_nvenc', 'hevc_nvenc'])
+    except Exception as e:
+        ffmpeg_out = str(e)
+        nvenc_present = False
+
+    return jsonify({
+        'gpu_status': gpu_status,
+        'nvidia_smi': smi_out,
+        'nvenc_in_ffmpeg': nvenc_present,
+        'ffmpeg_encoders_sample': '\n'.join([line for line in ffmpeg_out.splitlines() if 'nvenc' in line])
+    })
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

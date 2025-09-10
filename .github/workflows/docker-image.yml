@@ -1,4 +1,4 @@
-name: Build and Push to Harbor
+name: Build and Push to Docker Hub
 
 on:
   push:
@@ -12,14 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Login to Harbor
-        run: echo "${{ secrets.HARBOR_PASSWORD }}" | docker login harbor1.suanleme.cn -u ff4d6pgf --password-stdin
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
 
       - name: Build Docker image
         run: |
-          docker build -t ffmpeg:checkgpu .
+          docker build -t ffmpeg:gpu .
 
-      - name: Push to Harbor
+      - name: Push to Docker Hub
         run: |
-          docker tag ffmpeg:checkgpu harbor1.suanleme.cn/ff4d6pgf/ffmpeg:checkgpu
-          docker push harbor1.suanleme.cn/ff4d6pgf/ffmpeg:checkgpu
+          docker tag ffmpeg:gpu ${{ secrets.DOCKER_HUB_USERNAME }}/ffmpeg:gpu
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/ffmpeg:gpu
